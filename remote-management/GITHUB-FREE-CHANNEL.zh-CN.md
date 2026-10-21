@@ -1,6 +1,29 @@
 # GitHub 免费通道：权限实测与下一阶段设计
 
-2026-10-21：当前云端身份为 himoggyi（143339177），可读 Actions；向线上现有
+## 重新授权后的实际结果（2026-10-21 20:02 UTC）
+
+- Connector 和 gh 均可读取仓库，当前调用者为 himoggyi（143339177）。
+- 实际 git push 成功，远端 `codex/projector-remote-prototype` 已核对为
+  `389c251ddb4166ff77bd5a44cbf2bce14f18e643`（下列文档更新会继续推进此分支）。
+- 实际 workflow_dispatch 被接受，产生 [CI 运行 39666817604](https://github.com/himoggyi/cleanyourtv/actions/runs/39666817604)。
+  这是工作流触发证据，不是设备任务或真机执行证据。
+- 之前代码推送和 Actions dispatch 的 403 已解决，不再要求用户重复修复这两项权限。
+- 继续验证 Issues 持久账本时，创建明确标为不可执行、不含设备信息的探针请求返回
+  **410：Issues has been disabled in this repository**。没有创建探针 Issue；
+  Issues 写权限尚不能由此证明。此阻塞不同于 403，不能通过重新发送任务解决。
+- 当前仓库公开；没有自行开启 Issues、修改仓库可见性、写入秘密或操作投影仪。
+- 已创建 [草稿 PR #1](https://github.com/himoggyi/cleanyourtv/pull/1) 供审查现有代码，尚未合并。
+
+下一步由所有者建立专用私有任务仓库（例如 `himoggyi/cleanyourtv-tasks`），启用 Issues，
+并把它加入 Connector 授权。云端发布者需该仓库 Actions write；发布工作流需一次性
+Contents/Workflows 写入权限。专用工作流的运行令牌只需 Contents read、Issues write。
+设备令牌后续单独配置为该任务仓库 Issues write、取制品所需 Actions read，不能拿云端令牌配对设备。
+先复测私有账本创建/持久读取/关闭及 Actions 任务发布，再配置签名和进入设备验证。
+不要把任何 PAT、私钥或配对内容发到聊天中。
+
+以下为重新授权前的历史记录及尚未实施的设计；其中 403 不再代表当前状态。
+
+2026-10-21 重新授权前：云端身份为 himoggyi（143339177），可读 Actions；向线上现有
 `ci.yml` 的 `workflow_dispatch` 发出真实 POST，GitHub 返回 HTTP 403，
 `Resource not accessible by integration`。线上工作流列表只有 CI，没有 projector-relay。
 所以“云端可以发送设备任务”尚未成立。现有代码依赖外部 HTTPS broker，不符合本次零月费要求；
@@ -81,9 +104,9 @@ GitHub Free 有私有仓库 Actions 分钟、制品存储与 API 限额，以该
 
 ## 需要用户手动完成的步骤
 
-1. 在 GitHub 授权/云环境安全凭据处修复仅目标仓库 Actions write，重新运行真实探针。
-   不要在聊天发送任何密钥。当前没有安全凭据绑定，因此代理无法自行扩权。
-2. 确认采用专用私有任务仓库，发布后续受审查工作流，配置任务签名密钥与授权规则；
+1. 原项目的代码推送与 Actions write 已实际通过，不必再为它创建额外 PAT。
+   为新的私有任务仓库启用 Issues 并授权 Connector，复测该仓库的读写和触发权限。
+2. 发布后续受审查工作流，配置任务签名密钥与授权规则；
    检查免费额度及超额停止机制。这不是修改原厂设备或开放公网端口。
 3. 提供实际已安装 CleanYourTV APK 的只读签名核对材料，或在已授权局域网 ADB 下导出；
    若签名不同，找到原签名 keystore，不能卸载现有桌面来绕过校验。
