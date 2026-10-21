@@ -21,7 +21,7 @@ public class RemotePairingActivity extends Activity {
         layout.setPadding(48, 24, 48, 24);
         status = new TextView(this);
         status.setText("Remote prototype: " + (RemotePairing.enabled(this) ? "enabled" : "disabled")
-                + "\nOnly signed tasks: status, app list, layout, existing wallpaper, restore. APK install is disabled.");
+                + "\nOnly signed tasks: status, app list, layout, uploaded JPG/PNG or existing wallpaper, restore. APK install is disabled.");
         layout.addView(status);
         Button pair = new Button(this); pair.setText("Import pairing file and review");
         pair.setOnClickListener(v -> startActivityForResult(new Intent(Intent.ACTION_OPEN_DOCUMENT)
@@ -62,7 +62,7 @@ public class RemotePairingActivity extends Activity {
             new AlertDialog.Builder(this).setTitle("Authorize this controller?")
                     .setMessage("Device: " + c.getString("device") + "\nBroker: " + c.getString("broker")
                             + "\nRSA SHA-256: " + RemotePairing.fingerprint(c)
-                            + "\nCompare this fingerprint with your trusted controller. No APK installation or shell access.")
+                            + "\nCompare this fingerprint with your trusted controller. Authorizes signed JPG/PNG wallpaper uploads. No APK installation or shell access.")
                     .setNegativeButton("Cancel", null).setPositiveButton("Authorize", (d, which) -> {
                         try {
                             // Stop old worker before replacing credentials. Activation uses a fresh service.

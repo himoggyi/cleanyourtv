@@ -1,4 +1,43 @@
-# Verification record — 2026-10-21
+# Current wallpaper rollout verification — 2026-10-21
+
+Continued from the existing local prototype `00b5ec5`; it was not rewritten from scratch.
+
+| Requested stage | Evidence | Actual status |
+| --- | --- | --- |
+| Installed APK signature compatibility | Actual projector base.apk is not available; no ADB/VPN/device session exists | **UNVERIFIED; do not install yet** |
+| Local APK signing continuity | Android 9 apksigner verification + package/certificate/version gate, local release 6 → remote 7 → rescue 8 | Passed for LOCAL BUILD REFERENCES ONLY, not the installed projector |
+| JPG/PNG upload | Normalize/strip metadata, bounded decode, immutable device-scoped storage, signed hash descriptor, native HTTPS downloader/private atomic files | Implemented and compiled; physical Android decoder/path still needs device acceptance |
+| Persistent HTTPS queue | SQLite WAL queue, durable assets, WSGI/Gunicorn, systemd/Caddy | Code/config complete; **not publicly deployed** |
+| Actions permission | Actual POST to existing CI workflow repeated in this turn | **403 Resource not accessible by integration**; no dispatch created; outside grant still required |
+| Publish source branch | Actual push of the completed local prototype branch repeated in this turn | **403 permission denied**; no branch or PR was published |
+| Android builds | release, remote, rescue compile + lint + APK assembly | Passed; no APK installed |
+| End-to-end | Real TLS upload → simulated Actions signer → broker restart → verified asset download → simulated-device file/preferences → persistent receipt | Passed **with an explicitly simulated device**; not a real projector E2E result |
+
+Automated checks:
+
+- **27 remote Python tests passed** with pinned Pillow 13.0.0 / Gunicorn 26.2.0. Includes actual Gunicorn startup with two workers, independent upload/read/write/device permissions, MIME/corrupt/animated/bomb/size rejection, EXIF removal, transparent PNG handling, image descriptor binding, task IDs, delegated-environment rejection before accessing a key/network, TLS certificate rejection/trusted-test-CA success, queue restart, immutable receipts and update refusal on mismatched APK identities.
+- Existing repository suite: **120 run, 119 passed, 1 skipped** by the original non-main rule.
+- Each Android variant ran the same **124 existing JVM tests**, all passed. These do **not** exercise the new service on Android hardware and are not 372 distinct native-path tests.
+- All three lint tasks: **0 errors**; release/rescue 62 warnings, remote 73. Additional prototype warnings include UI localization, package visibility and the frame evidence preferences write. No new lint baseline suppresses errors.
+- Official Caddy 2.11.7 Linux archive verified against its published **SHA-512**, and `caddy adapt` accepted the supplied configuration. This did not obtain a certificate or start a public service.
+- APK manifest inspection confirmed INTERNET and RemoteTaskService **only in remote**; release/rescue have neither. None requests REQUEST_INSTALL_PACKAGES.
+- Default release is **416,067 bytes**, within the unchanged 430,080-byte limit; remote **460,119 bytes**, rescue **416,083 bytes**.
+- `apk_guard.py` verified signatures for Android SDK 28. All local APKs share certificate SHA-256 `f746475e2a6e5fb26146ee00d03fd274591e190a81965ad16dbce29182debff4`; this is the local debug certificate, not a claimed projector certificate.
+
+Current artifact SHA-256:
+
+```text
+release 164b76e07addfea9f7ed82a4208bfba6df129ab531b1022b147e8dc2dd5f0524
+remote  4e4e6c50f1e5397f482e0ebe18f509dde7b0312dd3164a9be49d0ec7dcc1506f
+rescue  7e519ae5c262968439b1a20893a7a477f82243e2e2cfdddfbdd22ebacb14a0e5
+```
+
+Remaining owner actions are consolidated in [DEPLOYMENT.zh-CN.md](DEPLOYMENT.zh-CN.md): actual APK extraction/key match, server/domain approval and deployment, single-repository Actions-write credential and reviewed workflow publication, then local update/pairing and real wallpaper verification.
+No existing desktop was uninstalled, no data was cleared, no factory launcher/HOME changed, no public ADB enabled, and no credentials were committed.
+
+---
+
+# Historical phase-1 verification — local commit 00b5ec5
 
 Base repository: `himoggyi/cleanyourtv`, commit `a6996036102f9c84f1f6e19ac51164fa1e83a30c`.
 Work is on the **local** branch `codex/projector-remote-prototype`.

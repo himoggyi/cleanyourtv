@@ -1,4 +1,4 @@
-"""Executable, device-free security and HTTP round-trip tests (stdlib + OpenSSL)."""
+"""Device-free unittest security checks, pinned image dependencies and OpenSSL."""
 import base64
 import copy
 import json
@@ -124,7 +124,7 @@ class RemoteTests(unittest.TestCase):
 
     def test_http_submit_poll_receipt_and_permissions(self):
         q = Queue(self.root / "http.sqlite")
-        server = HTTPServer(("127.0.0.1", 0), handler(q, "writer", {"x5pro": "reader", "other": "other-reader"}, self.pub))
+        server = HTTPServer(("127.0.0.1", 0), handler(q, "writer", {"x5pro": "reader", "other": "other-reader"}, self.pub, reader_token="observer"))
         thread = threading.Thread(target=server.serve_forever, daemon=True); thread.start()
         origin = "http://127.0.0.1:" + str(server.server_port)
         def request(path, token, body=None):
@@ -151,7 +151,8 @@ class RemoteTests(unittest.TestCase):
             result = {"status": "succeeded", "data": {"simulated": True, "sdk": 28}}
             self.assertEqual(request("/v1/devices/x5pro/results/http-1", "reader", result)[0], 200)
             self.assertIsNone(request("/v1/devices/x5pro/next", "reader")[1]["task"])
-            self.assertEqual(request("/v1/tasks", "writer")[1]["tasks"][0]["result"], result)
+            self.assertEqual(request("/v1/tasks", "observer")[1]["tasks"][0]["result"], result)
+            self.assertEqual(request("/v1/tasks", "writer")[0], 403)
             self.assertEqual(request("/v1/tasks", "reader")[0], 403)
             bad = copy.deepcopy(envelope); bad["signature"] = base64.b64encode(b"x" * 256).decode()
             self.assertEqual(request("/v1/tasks", "writer", bad)[0], 400)

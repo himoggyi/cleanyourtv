@@ -46,6 +46,7 @@ final class RemoteTasks {
                 || expires <= now || expires <= issued || expires - issued > 3600) throw new IllegalArgumentException("task binding or expiry");
         JSONObject a = t.getJSONObject("args");
         switch (t.getString("op")) {
+            case "apply_wallpaper": RemoteWallpaper.validate(a); break;
             case "status": case "list_apps": case "restore_desktop": exact(a); break;
             case "set_layout":
                 exact(a, "columns", "rows_below_dock");
@@ -71,10 +72,15 @@ final class RemoteTasks {
         try { out.write(s.toString().getBytes(StandardCharsets.UTF_8)); af.finishWrite(out); }
         catch (Exception e) { af.failWrite(out); throw e; }
     }
-    static JSONObject execute(Context c, JSONObject task) throws Exception {
+    static JSONObject execute(Context c, JSONObject task, JSONObject pairing) throws Exception {
         String op = task.getString("op"); JSONObject a = task.getJSONObject("args");
+        File uploaded = op.equals("apply_wallpaper") ? RemoteWallpaper.download(c, pairing, task) : null;
+        if (integer(task, "expires_at") <= System.currentTimeMillis() / 1000) throw new IllegalArgumentException("task expired before apply");
+        if (!RemotePairing.enabled(c)) throw new IllegalStateException("revoked");
         switch (op) {
             case "status": return new JSONObject().put("sdk", Build.VERSION.SDK_INT).put("model", Build.MODEL)
+                    .put("display_revision", c.getSharedPreferences("remote_render_state", 0).getString("revision", ""))
+                    .put("display_file", c.getSharedPreferences("remote_render_state", 0).getString("file", ""))
                     .put("apk_install", "disabled").put("arbitrary_shell", "disabled");
             case "list_apps":
                 JSONArray apps = new JSONArray();
@@ -84,7 +90,7 @@ final class RemoteTasks {
                     apps.put(p.packageName);
                 }
                 return new JSONObject().put("packages", apps).put("limit", 60).put("possibly_truncated", apps.length() == 60);
-            case "set_layout": case "set_wallpaper": case "restore_desktop":
+            case "set_layout": case "set_wallpaper": case "apply_wallpaper": case "restore_desktop":
                 Config.load(c); // Synchronize existing theme choices before snapshot/apply.
                 SharedPreferences.Editor edit = c.getSharedPreferences(Config.SETTINGS_NAME, 0).edit();
                 if (op.equals("restore_desktop")) {
@@ -97,7 +103,9 @@ final class RemoteTasks {
                         }
                     }
                 } else {
-                    if (op.equals("set_wallpaper")) {
+                    if (uploaded != null) {
+                        backup(c); edit.putString(Config.WALLPAPER_CHOICE_KEY, uploaded.getName());
+                    } else if (op.equals("set_wallpaper")) {
                         File dir = Config.dir(c);
                         if (dir == null) throw new IllegalStateException("no theme storage");
                         File collection = new File(dir, "wallpapers"); File image = new File(collection, a.getString("asset"));
@@ -113,6 +121,7 @@ final class RemoteTasks {
                 // Revision and settings commit together; MainActivity observes it without an exported IPC.
                 edit.putString(REVISION, task.getString("id"));
                 if (!edit.commit()) throw new IllegalStateException("preferences commit failed");
+                if (uploaded != null) return RemoteWallpaper.evidence(c, task, uploaded);
                 return new JSONObject().put("applied", true).put("visible", "on Home resume or next minute tick");
             default: throw new IllegalArgumentException("operation disabled");
         }

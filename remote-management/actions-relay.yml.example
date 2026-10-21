@@ -13,17 +13,20 @@ jobs:
     if: github.repository == 'himoggyi/cleanyourtv' && github.event.sender.id == 143339177
     runs-on: ubuntu-latest
     timeout-minutes: 3
-    # Configure required reviewers and only main deployment branch BEFORE activation.
-    # Prototype requires explicit approval for EVERY task, including harmless ones.
-    environment: projector-control
+    # Defaults to human review. Owner may explicitly enable one-time delegated wallpaper control.
+    # Both environments must restrict deployment to main. Only projector-wallpaper omits per-task reviewers.
+    environment: ${{ vars.PROJECTOR_AUTOMATIC_WALLPAPER == 'true' && fromJSON(inputs.task).op == 'apply_wallpaper' && 'projector-wallpaper' || 'projector-control' }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           ref: main
           persist-credentials: false
+      - name: Install pinned image validation dependencies
+        run: python3 -m pip install --disable-pip-version-check -r remote-management/requirements.txt
       - name: Validate, sign and enqueue
         env:
           OWNER_ID: '143339177'
+          ALLOWED_OPERATION: ${{ vars.PROJECTOR_AUTOMATIC_WALLPAPER == 'true' && fromJSON(inputs.task).op == 'apply_wallpaper' && 'apply_wallpaper' || '' }}
           BROKER_URL: ${{ vars.PROJECTOR_BROKER_URL }}
           BROKER_WRITER_TOKEN: ${{ secrets.PROJECTOR_BROKER_WRITER_TOKEN }}
           TASK_SIGNING_KEY: ${{ secrets.PROJECTOR_TASK_SIGNING_KEY }}

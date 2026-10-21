@@ -17,3 +17,10 @@ launcher/replay_pid*.log
 remote-management/runtime/
 remote-management/*.pem
 remote-management/pairing.json
+remote-management/broker.json
+remote-management/*-token
+remote-management/.env*
+remote-management/.venv/
+*.jks
+*.keystore
+.secrets/

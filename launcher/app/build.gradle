@@ -15,6 +15,17 @@ android {
         versionName '2.5'
     }
 
+    signingConfigs {
+        if (providers.environmentVariable('PROJECTOR_KEYSTORE').isPresent()) {
+            owner {
+                storeFile file(providers.environmentVariable('PROJECTOR_KEYSTORE').get())
+                storePassword providers.environmentVariable('PROJECTOR_STORE_PASSWORD').get()
+                keyAlias providers.environmentVariable('PROJECTOR_KEY_ALIAS').get()
+                keyPassword providers.environmentVariable('PROJECTOR_KEY_PASSWORD').get()
+            }
+        }
+    }
+
     buildTypes {
         release {
             // R8 strips and optimises the code (AndroidX included): smaller APK, faster start on a slow TV CPU.
@@ -29,6 +40,14 @@ android {
             initWith release
             matchingFallbacks = ['release']
             versionNameSuffix '-remote-prototype'
+            if (signingConfigs.findByName('owner') != null) signingConfig signingConfigs.owner
+        }
+        rescue {
+            initWith release
+            matchingFallbacks = ['release']
+            // Forward-only rollback: same private preferences and theme files, no remote service.
+            versionNameSuffix '-rescue'
+            if (signingConfigs.findByName('owner') != null) signingConfig signingConfigs.owner
         }
     }
 
@@ -43,6 +62,18 @@ android {
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+androidComponents {
+    onVariants(selector().all()) { variant ->
+        if (variant.buildType == 'remote' || variant.buildType == 'rescue') {
+            def property = variant.buildType == 'remote' ? 'remoteVersionCode' : 'rescueVersionCode'
+            def fallback = variant.buildType == 'remote' ? '7' : '8'
+            variant.outputs.each { output ->
+                output.versionCode.set(providers.gradleProperty(property).getOrElse(fallback).toInteger())
+            }
+        }
     }
 }
 

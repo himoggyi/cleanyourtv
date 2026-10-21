@@ -8,7 +8,7 @@ import time
 from pathlib import Path
 
 LIMIT = 16384
-OPERATIONS = {"status", "list_apps", "set_layout", "set_wallpaper", "restore_desktop"}
+OPERATIONS = {"status", "list_apps", "set_layout", "set_wallpaper", "apply_wallpaper", "restore_desktop"}
 ID = re.compile(r"[a-zA-Z0-9_-]{1,64}\Z")
 
 
@@ -52,7 +52,10 @@ def validate(t, device=None, now=None):
     if type(t["op"]) is not str or t["op"] not in OPERATIONS:
         raise ValueError("operation not allowed (including APK installation)")
     a = t["args"]
-    if t["op"] == "set_layout":
+    if t["op"] == "apply_wallpaper":
+        from images import validate_descriptor
+        validate_descriptor(a)
+    elif t["op"] == "set_layout":
         exact(a, ("columns", "rows_below_dock"))
         if (type(a["columns"]) is not int or not 4 <= a["columns"] <= 7
                 or type(a["rows_below_dock"]) is not int or not 0 <= a["rows_below_dock"] <= 3):

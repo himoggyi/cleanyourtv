@@ -16,10 +16,10 @@ def prepare_task(event, owner_id, event_name, run_id, attempt, now):
         raise ValueError("unsupported event")
     # Deterministic per-run ID prevents rerun from applying a task twice.
     task = loads(event["inputs"]["task"])
-    task_id = "gh-" + run_id
+    task_id = task.get("request_id", "gh-" + run_id)
     full = {"v": 1, "id": task_id, "device": task["device"], "op": task["op"],
             "args": task["args"], "issued_at": now, "expires_at": now + 1800}
-    if set(task) != {"device", "op", "args"}:
+    if set(task) not in ({"device", "op", "args"}, {"device", "op", "args", "request_id"}):
         raise ValueError("unexpected submission fields")
     validate(full, now=now)
     # Forbid a rerun: a regenerated signature/timestamp with the same ID would collide.
@@ -33,6 +33,9 @@ def main():
     full = prepare_task(event, int(os.environ["OWNER_ID"]), os.environ["GITHUB_EVENT_NAME"],
                         os.environ["GITHUB_RUN_ID"], os.environ.get("GITHUB_RUN_ATTEMPT", "1"), int(time.time()))
     task_id = full["id"]
+    allowed = os.environ.get("ALLOWED_OPERATION", "")
+    if allowed and full["op"] != allowed:
+        raise ValueError("operation is outside the delegated environment scope")
     url = os.environ["BROKER_URL"]
     from urllib.parse import urlsplit
     u = urlsplit(url)

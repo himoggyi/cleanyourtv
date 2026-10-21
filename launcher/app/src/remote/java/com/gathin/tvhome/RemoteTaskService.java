@@ -92,7 +92,10 @@ public class RemoteTaskService extends Service {
         JSONObject result;
         try {
             if (!running || !RemotePairing.enabled(this)) throw new IllegalStateException("revoked");
-            result = new JSONObject().put("status", "succeeded").put("data", RemoteTasks.execute(this, task));
+            result = new JSONObject().put("status", "succeeded").put("data", RemoteTasks.execute(this, task, pairing));
+        } catch (InterruptedException e) {
+            result = new JSONObject().put("status", "unknown").put("data", new JSONObject().put("reason", "interrupted; settings may already have applied"));
+            Thread.currentThread().interrupt();
         } catch (Exception e) {
             result = new JSONObject().put("status", "failed").put("data", new JSONObject().put("reason", "execution rejected or failed"));
         }
