@@ -24,6 +24,12 @@ android {
             // Sideloaded over ADB, never published: sign with the debug key so it installs over a debug build.
             signingConfig signingConfigs.debug
         }
+        // Explicit opt-in: the ordinary release keeps its local-only manifest and size budget.
+        remote {
+            initWith release
+            matchingFallbacks = ['release']
+            versionNameSuffix '-remote-prototype'
+        }
     }
 
     packagingOptions {

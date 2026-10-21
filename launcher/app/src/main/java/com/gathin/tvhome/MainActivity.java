@@ -270,9 +270,18 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             updateClockVisibility();
         }
     };
+    private String remoteDesktopRevision;
+
+    private boolean remoteDesktopChanged() {
+        String current = getSharedPreferences(Config.SETTINGS_NAME, MODE_PRIVATE)
+                .getString("remote_desktop_revision", null);
+        return !java.util.Objects.equals(remoteDesktopRevision, current);
+    }
+
     private final Runnable minuteTick = new Runnable() {
         @Override
         public void run() {
+            if (remoteDesktopChanged()) { recreate(); return; }
             updateGreeting();
             updateRace();
             updateWifiLabel();
@@ -288,6 +297,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         setContentView(R.layout.activity_main);
         density = getResources().getDisplayMetrics().density;
         // config.xml, overlaid by config.json from a pushed theme (see Config and tools/theme.sh).
+        remoteDesktopRevision = getSharedPreferences(Config.SETTINGS_NAME, MODE_PRIVATE)
+                .getString("remote_desktop_revision", null);
         Config cfg = Config.load(this);
         settingsKeycodes = cfg.settingsKeycodes;
         settingsKeyPanel = cfg.settingsKeyPanel;
@@ -601,6 +612,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     @Override
     protected void onResume() {
         super.onResume();
+        if (remoteDesktopChanged()) { recreate(); return; }
         // A festival that started or ended while Home was in the background: rebuild with or without it.
         if (festive != festival.active(LocalDate.now())) {
             recreate();

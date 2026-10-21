@@ -26,6 +26,8 @@ jobs:
         env:
           CLEANYOURTV_STRICT: ${{ github.event_name == 'push' && '1' || '' }}
         run: python3 -m unittest discover -s tests -v
+      - name: Remote protocol, authorization and queue round trip (no device)
+        run: python3 -m unittest discover -s remote-management -p 'test_*.py' -v
 
   launcher:
     name: Launcher build and unit tests
@@ -50,9 +52,18 @@ jobs:
           size=$(stat -c %s launcher/app/build/outputs/apk/release/app-release.apk)
           echo "release APK: $((size / 1024)) KB"
           test "$size" -lt 430080 || { echo "APK is over 420 KB; the launcher targets 1 GB TVs, keep it small"; exit 1; }
+      - name: Opt-in remote prototype build, lint and unit tests (no device)
+        working-directory: launcher
+        run: ./gradlew --no-daemon testRemoteUnitTest lintRemote assembleRemote
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: CleanYourTV-APK
           path: launcher/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
+      - name: Upload opt-in remote prototype (not installed or published)
+        uses: actions/upload-artifact@v4
+        with:
+          name: CleanYourTV-Remote-Prototype
+          path: launcher/app/build/outputs/apk/remote/app-remote.apk
           if-no-files-found: error

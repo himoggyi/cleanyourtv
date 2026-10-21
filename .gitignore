@@ -14,3 +14,6 @@ backup/
 *.aab
 launcher/hs_err_pid*.log
 launcher/replay_pid*.log
+remote-management/runtime/
+remote-management/*.pem
+remote-management/pairing.json
