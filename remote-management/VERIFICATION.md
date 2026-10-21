@@ -1,3 +1,9 @@
+# 后续状态说明
+
+以下为旧 HTTPS broker 阶段记录。最新 GitHub 私有签名状态队列已真实通过云端验证，
+Android GitHub 状态适配 v9 / rescue v10 已构建但未安装；详见
+[最新验证与配对边界](GITHUB-PAIRING.zh-CN.md)。历史 403 不再代表当前权限。
+
 # Current wallpaper rollout verification — 2026-10-21
 
 Continued from the existing local prototype `00b5ec5`; it was not rewritten from scratch.

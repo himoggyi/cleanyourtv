@@ -5,7 +5,7 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.os.Build;
 import android.util.AtomicFile;
-import android.util.Base64;
+import java.util.Base64;
 import org.json.JSONObject;
 import org.json.JSONArray;
 import java.io.File;
@@ -32,8 +32,8 @@ final class RemoteTasks {
     }
     static JSONObject verify(JSONObject e, JSONObject pairing) throws Exception {
         exact(e, "payload", "signature");
-        byte[] payload = Base64.decode(e.getString("payload"), Base64.NO_WRAP);
-        byte[] sig = Base64.decode(e.getString("signature"), Base64.NO_WRAP);
+        byte[] payload = Base64.getDecoder().decode(e.getString("payload"));
+        byte[] sig = Base64.getDecoder().decode(e.getString("signature"));
         if (payload.length > 16384 || sig.length < 256 || sig.length > 512) throw new IllegalArgumentException("size");
         Signature verifier = Signature.getInstance("SHA256withRSA");
         verifier.initVerify(RemotePairing.publicKey(pairing)); verifier.update(payload);

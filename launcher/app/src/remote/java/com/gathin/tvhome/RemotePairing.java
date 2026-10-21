@@ -34,20 +34,31 @@ final class RemotePairing {
     static PublicKey publicKey(JSONObject c) throws Exception {
         String pem = c.getString("public_key").replace("-----BEGIN PUBLIC KEY-----", "")
                 .replace("-----END PUBLIC KEY-----", "").replaceAll("\\s", "");
-        PublicKey k = KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(Base64.decode(pem, Base64.DEFAULT)));
+        PublicKey k = KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(java.util.Base64.getDecoder().decode(pem)));
         int bits = ((RSAPublicKey) k).getModulus().bitLength();
         if (bits < 2048 || bits > 4096) throw new IllegalArgumentException("RSA key size");
         return k;
     }
     static void validate(JSONObject c) throws Exception {
-        RemoteTasks.exact(c, "device", "broker", "token", "public_key");
+        if (github(c)) RemoteTasks.exact(c, "device", "transport", "repository", "repository_id", "token", "public_key");
+        else RemoteTasks.exact(c, "device", "broker", "token", "public_key");
         if (!c.getString("device").matches("[A-Za-z0-9_-]{1,64}")) throw new IllegalArgumentException("device");
         if (!c.getString("token").matches("[A-Za-z0-9_-]{32,256}")) throw new IllegalArgumentException("token");
+        if (github(c)) {
+            if (!RemoteGitHub.REPOSITORY.equals(c.getString("repository"))
+                    || RemoteTasks.integer(c, "repository_id") != RemoteGitHub.REPOSITORY_ID
+                    || "cloud-probe".equals(c.getString("device"))) throw new IllegalArgumentException("repository/device");
+            publicKey(c); return;
+        }
         URI u = new URI(c.getString("broker"));
         if (!"https".equals(u.getScheme()) || u.getHost() == null || u.getRawUserInfo() != null
                 || u.getRawQuery() != null || u.getRawFragment() != null
                 || !(u.getPath().isEmpty() || "/".equals(u.getPath()))) throw new IllegalArgumentException("HTTPS origin required");
         publicKey(c);
+    }
+    static boolean github(JSONObject c) { return "github-issues".equals(c.optString("transport")); }
+    static String controller(JSONObject c) throws Exception {
+        return github(c) ? "GitHub private: " + c.getString("repository") : c.getString("broker");
     }
     static String fingerprint(JSONObject c) throws Exception {
         byte[] hash = MessageDigest.getInstance("SHA-256").digest(publicKey(c).getEncoded());

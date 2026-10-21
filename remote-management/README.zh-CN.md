@@ -3,14 +3,15 @@
 在上次 `remote-management` 原型上继续扩展，支持任意文件名的 JPG/PNG 附件上传、内容校验、
 签名任务、HTTPS 持久队列、Android 9 私有壁纸存储和桌面 frame-ready 回执。
 
-**当前没有设备 APK 签名核对、生产部署或真投影仪端到端结果。2026-10-21 重新授权后，
-实际代码推送及 Actions dispatch 已成功；免费任务账本仍未部署，当前公开仓库的 Issues 被关闭（410）。**
+**私有任务仓库的 GitHub Actions → RSA 签名探针 → Issues 持久化 → 独立读回验签已实测成功。
+Android 9 GitHub 状态版已构建，尚未核对真实已安装 APK 签名、安装配对或完成真机端到端验证。**
 本地构建和模拟测试不代表家中投影仪已经受控。APK 安装/卸载、系统组件禁用、任意 Shell 和公网 ADB 均未实现。
 
 - [签名更新、部署成本、权限修复、安装回退与集中手动清单](DEPLOYMENT.zh-CN.md)
 - [实际验证结果与尚未完成的步骤](VERIFICATION.md)
 - [未来聊天附件操作约定](CHAT-CONTROL.md)
 - [零月费 GitHub 通道门槛、权限复测与安装功能设计](GITHUB-FREE-CHANNEL.zh-CN.md)（尚未实现安装）
+- [已部署的私有状态通道、Android 9 配对与集中手动清单](GITHUB-PAIRING.zh-CN.md)
 
 架构：`Codex 附件 → 固定上传脚本 → GitHub Actions 身份/授权/签名 → HTTPS 持久中继 → 投影仪主动拉取 → 带哈希与绘制证据的回执`。
 一次性明确启用仅壁纸委托后，无须每次在投影仪确认换图；未启用时仍保留 GitHub 审核。

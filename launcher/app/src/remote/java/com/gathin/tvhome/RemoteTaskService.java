@@ -28,9 +28,12 @@ public class RemoteTaskService extends Service {
         notification("Starting; APK installation disabled");
         db = openOrCreateDatabase("remote-journal.db", 0, null);
         db.execSQL("CREATE TABLE IF NOT EXISTS journal (id TEXT NOT NULL, device TEXT NOT NULL, result TEXT, sent INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(device,id))");
+        db.execSQL("CREATE TABLE IF NOT EXISTS github_journal (id TEXT NOT NULL, device TEXT NOT NULL, issue INTEGER NOT NULL, result TEXT, sent INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(device,id))");
         // A null result means the process died after claiming. Never execute that ID again.
         db.execSQL("UPDATE journal SET result=? WHERE result IS NULL",
                 new Object[]{"{\"status\":\"unknown\",\"data\":{\"reason\":\"process interrupted; inspect device before resubmitting\"}}"});
+        db.execSQL("UPDATE github_journal SET result=? WHERE result IS NULL",
+                new Object[]{"{\"status\":\"unknown\",\"data\":{\"reason\":\"process interrupted; status was not confirmed\"}}"});
     }
     private void notification(String text) {
         Intent settings = new Intent(this, RemotePairingActivity.class);
@@ -76,6 +79,7 @@ public class RemoteTaskService extends Service {
         }
     }
     private void poll(JSONObject pairing) throws Exception {
+        if (RemotePairing.github(pairing)) { pollGitHub(pairing); return; }
         flush(pairing);
         JSONObject response = request(pairing, "/next", null);
         if (response.isNull("task")) return;
@@ -101,6 +105,39 @@ public class RemoteTaskService extends Service {
         }
         db.execSQL("UPDATE journal SET result=? WHERE device=? AND id=?", new Object[]{result.toString(), pairing.getString("device"), id});
         flush(pairing);
+    }
+    private void flushGitHub(JSONObject pairing) throws Exception {
+        try (Cursor rows = db.rawQuery("SELECT id,issue,result FROM github_journal WHERE sent=0 AND result IS NOT NULL AND device=?",
+                new String[]{pairing.getString("device")})) {
+            while (rows.moveToNext()) {
+                if (!running || !RemotePairing.enabled(this)) return;
+                RemoteGitHub.receipt(pairing, rows.getLong(1), rows.getString(0), new JSONObject(rows.getString(2)));
+                db.execSQL("UPDATE github_journal SET sent=1 WHERE device=? AND id=?", new Object[]{pairing.getString("device"), rows.getString(0)});
+            }
+        }
+    }
+    private void pollGitHub(JSONObject pairing) throws Exception {
+        flushGitHub(pairing);
+        RemoteGitHub.Entry entry = RemoteGitHub.next(pairing);
+        if (entry == null) return;
+        String id = entry.task.getString("id"), device = pairing.getString("device");
+        try (Cursor row = db.rawQuery("SELECT result FROM github_journal WHERE device=? AND id=?", new String[]{device, id})) {
+            if (row.moveToFirst()) {
+                if (!row.isNull(0)) RemoteGitHub.receipt(pairing, entry.issue, id, new JSONObject(row.getString(0)));
+                return; // Never re-execute a claimed ID.
+            }
+        }
+        db.execSQL("INSERT INTO github_journal(id,device,issue) VALUES (?,?,?)", new Object[]{id, device, entry.issue});
+        JSONObject result;
+        try {
+            if (!running || !RemotePairing.enabled(this)) throw new IllegalStateException("revoked");
+            if (!"status".equals(entry.task.getString("op"))) throw new IllegalArgumentException("status only");
+            result = new JSONObject().put("status", "succeeded").put("data", RemoteTasks.execute(this, entry.task, pairing));
+        } catch (Exception e) {
+            result = new JSONObject().put("status", "failed").put("data", new JSONObject().put("reason", "status rejected or failed"));
+        }
+        db.execSQL("UPDATE github_journal SET result=? WHERE device=? AND id=?", new Object[]{result.toString(), device, id});
+        flushGitHub(pairing);
     }
     private void loop() {
         long delay = 60000;

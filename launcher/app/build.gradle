@@ -69,7 +69,7 @@ androidComponents {
     onVariants(selector().all()) { variant ->
         if (variant.buildType == 'remote' || variant.buildType == 'rescue') {
             def property = variant.buildType == 'remote' ? 'remoteVersionCode' : 'rescueVersionCode'
-            def fallback = variant.buildType == 'remote' ? '7' : '8'
+            def fallback = variant.buildType == 'remote' ? '9' : '10'
             variant.outputs.each { output ->
                 output.versionCode.set(providers.gradleProperty(property).getOrElse(fallback).toInteger())
             }
@@ -82,4 +82,5 @@ dependencies {
     implementation 'androidx.dynamicanimation:dynamicanimation:1.0.0'
     // Test only (never in the APK): plain JVM tests for the module card validators, src/test.
     testImplementation 'junit:junit:4.13.2'
+    testRemoteImplementation 'org.json:json:20240303'
 }

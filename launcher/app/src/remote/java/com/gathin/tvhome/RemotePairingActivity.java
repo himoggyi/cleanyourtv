@@ -32,7 +32,7 @@ public class RemotePairingActivity extends Activity {
             RemotePairing.enabled(this, false);
             stopService(new Intent(this, RemoteTaskService.class));
             ((android.app.job.JobScheduler) getSystemService(JOB_SCHEDULER_SERVICE)).cancel(RemoteWatchdog.JOB);
-            status.setText("Disabled. Rotate broker device token to revoke it on the server too.");
+            status.setText("Disabled. Revoke the controller/device token at its provider too.");
         });
         layout.addView(stop);
         Button resume = new Button(this); resume.setText("Resume previously paired agent");
@@ -50,7 +50,7 @@ public class RemotePairingActivity extends Activity {
             RemotePairing.enabled(this, false);
             throw e;
         }
-        status.setText("Enabled. Notification shows connectivity. Task results are stored in the broker.");
+        status.setText("Enabled. Notification shows connectivity. Results go to the paired private controller. GitHub supports status only.");
     }
     @Override public void onActivityResult(int request, int result, Intent data) {
         super.onActivityResult(request, result, data);
@@ -60,9 +60,11 @@ public class RemotePairingActivity extends Activity {
             while ((n = in.read(buf)) != -1) { out.write(buf, 0, n); if (out.size() > 16384) throw new IllegalArgumentException(); }
             JSONObject c = new JSONObject(new String(out.toByteArray(), StandardCharsets.UTF_8)); RemotePairing.validate(c);
             new AlertDialog.Builder(this).setTitle("Authorize this controller?")
-                    .setMessage("Device: " + c.getString("device") + "\nBroker: " + c.getString("broker")
+                    .setMessage("Device: " + c.getString("device") + "\nController: " + RemotePairing.controller(c)
                             + "\nRSA SHA-256: " + RemotePairing.fingerprint(c)
-                            + "\nCompare this fingerprint with your trusted controller. Authorizes signed JPG/PNG wallpaper uploads. No APK installation or shell access.")
+                            + "\nCompare this fingerprint with your trusted controller. "
+                            + (RemotePairing.github(c) ? "GitHub: signed status tasks only." : "Authorizes signed JPG/PNG wallpaper uploads.")
+                            + " No APK installation or shell access.")
                     .setNegativeButton("Cancel", null).setPositiveButton("Authorize", (d, which) -> {
                         try {
                             // Stop old worker before replacing credentials. Activation uses a fresh service.
