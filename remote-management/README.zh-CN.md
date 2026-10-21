@@ -9,6 +9,7 @@
 - [签名更新、部署成本、权限修复、安装回退与集中手动清单](DEPLOYMENT.zh-CN.md)
 - [实际验证结果与尚未完成的步骤](VERIFICATION.md)
 - [未来聊天附件操作约定](CHAT-CONTROL.md)
+- [零月费 GitHub 通道门槛、安装功能设计与当前 403 阻塞](GITHUB-FREE-CHANNEL.zh-CN.md)（尚未实现安装）
 
 架构：`Codex 附件 → 固定上传脚本 → GitHub Actions 身份/授权/签名 → HTTPS 持久中继 → 投影仪主动拉取 → 带哈希与绘制证据的回执`。
 一次性明确启用仅壁纸委托后，无须每次在投影仪确认换图；未启用时仍保留 GitHub 审核。
