@@ -9,6 +9,11 @@ instead of the local one. Tailscale's personal plan is free.
 **Never forward port 5555 on their router to the internet.** ADB is full control of the TV, and
 bots actively scan the internet for open ADB ports.
 
+For an opt-in outbound HTTPS task channel instead of remote ADB, see the
+[Android 9 cloud task prototype](../remote-management/README.zh-CN.md). It includes a signed
+allowlist, an Actions relay design and a persistent device journal. It is not deployed or
+validated on a real projector; APK installation remains disabled.
+
 ## What you need
 
 - Tailscale on your computer, signed in. The Mac and Windows apps pick up subnet routes on their own;

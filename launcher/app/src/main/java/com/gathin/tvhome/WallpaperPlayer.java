@@ -25,6 +25,7 @@ final class WallpaperPlayer {
     private final List<File> files;
     private final long interval;
     private final SharedPreferences preferences;
+    private final Context context;
     private final ExecutorService decoder = Executors.newSingleThreadExecutor();
     private final Random random = new Random();
     private final int width;
@@ -35,6 +36,7 @@ final class WallpaperPlayer {
     private String displayed = "";
 
     WallpaperPlayer(Context context, FrameLayout root, Config config) {
+        this.context = context;
         this.root = root;
         files = new ArrayList<>(config.wallpapers);
         interval = config.wallpaperRotationMinutes * 60_000L;
@@ -73,6 +75,7 @@ final class WallpaperPlayer {
             Bitmap bitmap = decode(first);
             if (bitmap != null) {
                 image.setImageBitmap(bitmap);
+                recordRemoteFrame(first);
                 displayed = first.getName();
                 if (!displayed.equals(previous)) {
                     preferences.edit().putString("image", displayed)
@@ -126,6 +129,7 @@ final class WallpaperPlayer {
                     return;
                 }
                 image.setImageBitmap(bitmap);
+                recordRemoteFrame(next);
                 displayed = next.getName();
                 if (!displayed.equals(previous) || changed == 0) {
                     preferences.edit().putString("image", displayed)
@@ -157,5 +161,21 @@ final class WallpaperPlayer {
         } catch (Exception | OutOfMemoryError failure) {
             return null;
         }
+    }
+
+    /** Frame-ready evidence, not proof of physical projected pixels. No exported IPC. */
+    private void recordRemoteFrame(File file) {
+        if (!file.getName().matches("remote-[0-9a-f]{64}\\.(jpg|png)")) return;
+        String revision = context.getSharedPreferences(Config.SETTINGS_NAME, Context.MODE_PRIVATE)
+                .getString("remote_desktop_revision", "");
+        image.getViewTreeObserver().addOnPreDrawListener(new android.view.ViewTreeObserver.OnPreDrawListener() {
+            @Override public boolean onPreDraw() {
+                if (image.getViewTreeObserver().isAlive()) image.getViewTreeObserver().removeOnPreDrawListener(this);
+                if (!closed && image.isShown()) context.getSharedPreferences("remote_render_state", Context.MODE_PRIVATE)
+                        .edit().putString("revision", revision).putString("file", file.getName())
+                        .putString("evidence", "image_view_pre_draw").putLong("time", System.currentTimeMillis()).commit();
+                return true;
+            }
+        });
     }
 }

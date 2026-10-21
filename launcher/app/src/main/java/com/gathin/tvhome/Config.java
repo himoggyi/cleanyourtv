@@ -268,9 +268,15 @@ final class Config {
             wallpapers.clear();
             wallpaper = null;
             wallpaperEnabled = false;
-        } else if (wallpaperChoice != null && dir != null) {
-            File picked = WallpaperRotation.find(
-                    WallpaperRotation.images(new File(dir, "wallpapers")), wallpaperChoice);
+        } else if (wallpaperChoice != null) {
+            File picked;
+            if (wallpaperChoice.matches("remote-[0-9a-f]{64}\\.(jpg|png)")) {
+                // Uploaded images are private to the launcher, not writable by other storage apps.
+                picked = new File(new File(ctx.getFilesDir(), "remote-wallpapers"), wallpaperChoice);
+                if (!picked.isFile() || picked.length() == 0 || picked.length() > 8 * 1024 * 1024) picked = null;
+            } else if (dir != null) {
+                picked = WallpaperRotation.find(WallpaperRotation.images(new File(dir, "wallpapers")), wallpaperChoice);
+            } else picked = null;
             if (picked == null && wallpaperChoice.equals(
                     wallpaper != null ? wallpaper.getName() : "")) picked = wallpaper;
             if (picked != null) {

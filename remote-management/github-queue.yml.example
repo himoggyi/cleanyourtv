@@ -1,0 +1,39 @@
+name: Private signed task queue
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        type: choice
+        required: true
+        default: cloud-probe
+        options: [cloud-probe, authorized-status]
+      task:
+        type: string
+        required: true
+        default: '{"device":"cloud-probe","op":"status","args":{}}'
+permissions: {}
+jobs:
+  enqueue:
+    if: github.repository_id == '1428876145' && github.event.sender.id == 143339177 && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Sign isolated cloud probe and persist it
+        if: inputs.mode == 'cloud-probe'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 remote-management/github_queue.py --mode cloud-probe
+      - name: Sign authorized status task (disabled until configured)
+        if: inputs.mode == 'authorized-status'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PROJECTOR_ENABLE_DEVICE_TASKS: ${{ vars.PROJECTOR_ENABLE_DEVICE_TASKS }}
+          PROJECTOR_DEVICE_ID: ${{ vars.PROJECTOR_DEVICE_ID }}
+          PROJECTOR_TASK_SIGNING_KEY: ${{ secrets.PROJECTOR_TASK_SIGNING_KEY }}
+        run: python3 remote-management/github_queue.py --mode authorized-status

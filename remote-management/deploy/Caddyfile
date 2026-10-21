@@ -1,0 +1,17 @@
+# Set PROJECTOR_DOMAIN in Caddy's service environment to your own domain first.
+{$PROJECTOR_DOMAIN} {
+	request_body {
+		max_size 8388608
+	}
+	header {
+		X-Content-Type-Options nosniff
+		Cache-Control no-store
+	}
+	reverse_proxy 127.0.0.1:8765 {
+		transport http {
+			dial_timeout 5s
+			response_header_timeout 30s
+		}
+	}
+	# Access logging is intentionally off: no tokens, images, or package inventories in logs.
+}
